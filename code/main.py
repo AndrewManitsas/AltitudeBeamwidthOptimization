@@ -1,122 +1,128 @@
+# ==============================================================================
+# Title:       Joint Altitude and Beamwidth Optimization in UAV-Enabled Multiuser Networks
+#
+# Author:      Andreas Manitsas
+# Email:       amanitsb@ece.auth.gr
+# 
+# Course:      UAV13 Advanced Topics in Wireless Communications
+# Program:     MSc Aerial Autonomous Systems
+# Institution: Aristotle University of Thessaloniki, Faculty of Polytechnics
+# Term:        2025-2026
+#
+# Description: This script implements the joint altitude and beamwidth optimization for UAV-enabled multiuser communications.
+#
+# Disclaimer:  AI assistance may have been used during development
+# ==============================================================================
+
 import numpy as np
 import matplotlib.pyplot as plt
 
-# --- SYSTEM CONSTANTS (Section VI Parameters) ---
-BETA_0 = 1.42e-4      # Channel gain at reference d0=1m
-W = 10e6              # Total bandwidth (10 MHz)
-P_D_DBM = 10.0        # Downlink power (10 dBm)
-P_U_DBM = -10.0       # Uplink power (-10 dBm)
-N0_DBM_HZ = -169.0    # Noise floor (-169 dBm/Hz)
-RHO = 0.005           # Baseline user density (GTs/m^2)
-G0 = 2.2846           # Idealized antenna constant
+# ==========================================
+# 1. SYSTEM PARAMETERS (From Section VI)
+# ==========================================
+BETA_0 = 1.42e-4       # Channel power gain at reference distance d0=1m
+W = 10e6               # Total bandwidth (10 MHz)
+P_D_DBM = 10.0         # Downlink transmit power (10 dBm)
+P_U_DBM = -10.0        # Uplink transmit power (-10 dBm)
+N0_DBM_HZ = -169.0     # Noise power spectrum density (-169 dBm/Hz)
+RHO_DEFAULT = 0.005    # Default GT density (GTs/m^2)
 
-# Conversion to Linear Units
-P_d = 10**(P_D_DBM / 10.0) / 1000.0
-P_u = 10**(P_U_DBM / 10.0) / 1000.0
-N0 = 10**(N0_DBM_HZ / 10.0) / 1000.0
+# Convert dBm to Watts
+P_d = (10 ** (P_D_DBM / 10.0)) / 1000.0
+P_u = (10 ** (P_U_DBM / 10.0)) / 1000.0
+N0 = (10 ** (N0_DBM_HZ / 10.0)) / 1000.0
 
-# Fundamental Scaling Constants
+# Antenna constant G0 approx 2.2846
+G0 = (30000 / (2**2)) * ((np.pi / 180)**2)
+
+# Fundamental scaling variables used in equations
 a = (P_d * G0 * BETA_0) / (N0 * W)
-eta = (P_u * BETA_0 * G0 * RHO * np.pi) / (N0 * W)
 
-# --- ANALYTICAL FORMULATIONS ---
-def calculate_rmc(H, theta):
-    # Hexagonal deployment multiplier
-    k_s_coef = 1.5 * np.sqrt(3) * RHO * (H**2) * (np.tan(theta)**2)
+# ==========================================
+# 2. ANALYTICAL RATE FUNCTIONS
+# ==========================================
+def rate_multicast(H, theta, rho=RHO_DEFAULT):
+    """Equation (6): Multicast Sum Rate"""
+    # K_s coefficient
+    ks_coef = (3 * np.sqrt(3) / 2) * rho * (H**2) * (np.tan(theta)**2)
     snr_edge = (a * (np.cos(theta)**2)) / ((theta**2) * (H**2))
-    return k_s_coef * np.log2(1.0 + snr_edge)
+    # Return rate scaled to Mbps/Hz to match Fig 2
+    return (ks_coef * np.log2(1.0 + snr_edge)) / 1e6
 
-def calculate_rbc(H, theta):
-    term1 = (1.0 / (np.sin(theta)**2)) * np.log2(1.0 + (a * np.cos(theta)**2)/(theta**2 * H**2))
+def rate_broadcast(H, theta):
+    """Equation (8): Broadcast Sum Rate"""
+    term1 = (1.0 / (np.sin(theta)**2)) * np.log2(1.0 + (a * np.cos(theta)**2) / (theta**2 * H**2))
     term2 = (1.0 / (np.tan(theta)**2)) * np.log2(1.0 + a / (theta**2 * H**2))
-    num_log3 = (theta**2 * H**2) + a * np.cos(theta)**2
-    den_log3 = (theta**2 * H**2 * np.cos(theta)**2) + a * np.cos(theta)**2
-    term3 = (a / (theta**2 * H**2 * np.tan(theta)**2)) * np.log2(num_log3 / den_log3)
+    
+    num = (theta**2 * H**2) + a * np.cos(theta)**2
+    den = (theta**2 * H**2 * np.cos(theta)**2) + a * np.cos(theta)**2
+    term3 = (a / (theta**2 * H**2 * np.tan(theta)**2)) * np.log2(num / den)
+    
     return term1 - term2 + term3
 
-def calculate_rmac(theta, current_rho=RHO):
-    local_eta = (P_u * BETA_0 * G0 * current_rho * np.pi) / (N0 * W)
+def rate_mac(theta, rho):
+    """Equation (10): Uplink MAC Sum Rate"""
+    eta = (P_u * BETA_0 * G0 * rho * np.pi) / (N0 * W)
     t_tan = np.tan(theta)**2
     t_cos = np.cos(theta)**2
-    term1 = (1.0 / (t_cos * t_tan)) * np.log2(1.0 + (local_eta * np.sin(theta)**2)/(theta**2))
-    term2 = (1.0 / t_tan) * np.log2(1.0 + (local_eta * t_tan)/(theta**2))
-    term3 = (local_eta / theta**2) * np.log2(1.0 + (theta**2 * t_tan)/(theta**2 + local_eta * t_tan))
+    
+    term1 = (1.0 / (t_cos * t_tan)) * np.log2(1.0 + (eta * np.sin(theta)**2) / (theta**2))
+    term2 = (1.0 / t_tan) * np.log2(1.0 + (eta * t_tan) / (theta**2))
+    term3 = (eta / theta**2) * np.log2(1.0 + (theta**2 * t_tan) / (theta**2 + eta * t_tan))
+    
     return term1 - term2 + term3
 
-# --- GENERATE REPRODUCTION PLOTS (Question 4) ---
+# ==========================================
+# 3. PLOTTING FIGURES
+# ==========================================
+# Define ranges (avoiding 0 to prevent division by zero)
 theta_range = np.linspace(0.01, np.pi/2 - 0.01, 200)
 H_range = np.linspace(100, 4500, 200)
 
-plt.figure(figsize=(14, 10))
+plt.figure(figsize=(12, 10))
 
-# 1. Downlink Multicast Reproduction
+# --- Fig 2: Multicast Rate vs Theta ---
 plt.subplot(2, 2, 1)
 for h_val in [500, 1500, 2500, 3500, 4500]:
-    rates = [calculate_rmc(h_val, t) / 1e6 for t in theta_range]  # Mbps/Hz scaling
+    rates = [rate_multicast(h_val, t) for t in theta_range]
     plt.plot(theta_range, rates, label=f'H = {h_val}m')
-plt.title(r'Fig 2: Multicast Rate vs $\Theta$')
+plt.title(r'Fig 2: $\overline{R}_{MC}$ vs $\Theta$')
 plt.xlabel(r'$\Theta$ (rad)')
 plt.ylabel(r'$\overline{R}_{MC}$ (Mbps/Hz)')
-plt.grid(True); plt.legend()
+plt.grid(True, linestyle='--')
+plt.legend()
 
-# 2. Downlink Broadcast vs Altitude
+# --- Fig 3(a): Broadcast Rate vs H ---
 plt.subplot(2, 2, 2)
-rbc_vs_H = [calculate_rbc(h, np.pi/10) for h in H_range]
-plt.plot(H_range, rbc_vs_H, 'b-')
-plt.title(r'Fig 3a: Broadcast Rate vs Altitude ($\Theta=\pi/10$)')
-plt.xlabel('Altitude H (m)')
+fixed_theta = np.pi / 10
+rbc_vs_H = [rate_broadcast(h, fixed_theta) for h in H_range]
+plt.plot(H_range, rbc_vs_H, 'b-s', markevery=20)
+plt.title(r'Fig 3(a): $\overline{R}_{BC}$ vs $H$ ($\Theta = \pi/10$)')
+plt.xlabel('H (m)')
 plt.ylabel(r'$\overline{R}_{BC}$ (bps/Hz)')
-plt.grid(True)
+plt.grid(True, linestyle='--')
 
-# 3. Downlink Broadcast vs Beamwidth
+# --- Fig 3(b): Broadcast Rate vs Theta ---
 plt.subplot(2, 2, 3)
-rbc_vs_theta = [calculate_rbc(500, t) for t in theta_range]
-plt.plot(theta_range, rbc_vs_theta, 'r-')
-plt.title(r'Fig 3b: Broadcast Rate vs $\Theta$ (H=500m)')
+fixed_H = 500
+rbc_vs_theta = [rate_broadcast(fixed_H, t) for t in theta_range]
+plt.plot(theta_range, rbc_vs_theta, 'b-s', markevery=15)
+plt.title(r'Fig 3(b): $\overline{R}_{BC}$ vs $\Theta$ ($H = 500$m)')
 plt.xlabel(r'$\Theta$ (rad)')
 plt.ylabel(r'$\overline{R}_{BC}$ (bps/Hz)')
-plt.grid(True)
+plt.grid(True, linestyle='--')
 
-# 4. Uplink Multiple Access Reproduction
+# --- Fig 4: MAC Rate vs Theta ---
 plt.subplot(2, 2, 4)
-for rho_val in [0.001, 0.005, 0.010]:
-    rmac_vals = [calculate_rmac(t, rho_val) for t in theta_range]
-    plt.plot(theta_range, rmac_vals, label=f'$\\rho$ = {rho_val}')
-plt.title(r'Fig 4: Uplink MAC Rate vs $\Theta$')
+for rho_val, marker in zip([0.001, 0.005, 0.010], ['s', '*', '+']):
+    rmac_vals = [rate_mac(t, rho_val) for t in theta_range]
+    plt.plot(theta_range, rmac_vals, label=rf'$\rho = {rho_val}$', marker=marker, markevery=15)
+plt.axvline(x=1.3195, color='k', linestyle='--', label=r'Optimal $\Theta^* \approx 1.3195$')
+plt.title(r'Fig 4: $\overline{R}_{MAC}$ vs $\Theta$')
 plt.xlabel(r'$\Theta$ (rad)')
 plt.ylabel(r'$\overline{R}_{MAC}$ (bps/Hz)')
-plt.grid(True); plt.legend()
+plt.grid(True, linestyle='--')
+plt.legend()
 
 plt.tight_layout()
-plt.show()
-
-# --- SIZING OPTIMIZATION (Question 5) ---
-# Scenario Parameters
-TOTAL_AREA = 1e6      # Region dimension: 1,000,000 m^2
-R_target_range = np.linspace(0.1, 2.0, 10)  # Target rates in bps/Hz
-
-def compute_required_uavs(density):
-    required_uavs = []
-    # Uplink model evaluation context
-    best_theta = 1.3195  # Globally optimized uplink beamwidth
-    max_area_sum_rate = calculate_rmac(best_theta, density)
-    users_in_area = density * TOTAL_AREA
-    
-    for r_tar in R_target_range:
-        # Minimum fleet allocation sizing logic
-        total_capacity_needed = users_in_area * r_tar
-        num_nodes = np.ceil(total_capacity_needed / max_area_sum_rate)
-        required_uavs.append(int(num_nodes))
-    return required_uavs
-
-uavs_baseline = compute_required_uavs(RHO)
-uavs_congested = compute_required_uavs(RHO * 1.2)
-
-plt.figure(figsize=(8, 5))
-plt.plot(R_target_range, uavs_baseline, 'o-', label='Baseline Density ($\\rho$)')
-plt.plot(R_target_range, uavs_congested, 's--', label='Congested Density ($1.2\\rho$)')
-plt.title('Question 5: Minimum UAV Fleet Allocation Profile')
-plt.xlabel('Target Rate Threshold $R_{target}$ (bps/Hz)')
-plt.ylabel('Minimum Required Coordinated UAVs ($N_{min}$)')
-plt.grid(True); plt.legend()
 plt.show()

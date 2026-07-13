@@ -1,4 +1,4 @@
-# UAV-Assisted Wireless Communications: Altitude and Antenna Optimization
+# Altitude Beamwidth Optimization
 
 **Author:** Andreas Manitsas  
 **Course:** UAV13 Topics to Wireless Communications (MSc Aerial Autonomous Systems)  

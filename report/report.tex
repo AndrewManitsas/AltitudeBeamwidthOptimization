@@ -257,8 +257,8 @@ Let the total geographical area be $A = 1,000,000 \text{ m}^2$ ($1 \text{ km}^2$
 of $\rho = 0.005 \text{ GTs/m}^2$. The total number of users in the area is $K_{total} = \rho A$.
 The total required system capacity to guarantee $R_{target}$ for all users simultaneously is $C_{req} = K_{total} R_{target}$.
 
-As established in Section 3, the uplink MAC sum rate is independent of altitude $H$ and achieves a global maximum at an
-optimal beamwidth of $\Theta^* \approx 1.3195 \text{ rad}$[cite: 9]. Consequently, a single UAV provides a strict capacity
+The uplink MAC sum rate is independent of altitude $H$ and achieves a global maximum at an
+optimal beamwidth of $\Theta^* \approx 1.3195 \text{ rad}$. Consequently, a single UAV provides a strict capacity
 ceiling of $\overline{R}_{MAC}(\Theta^*) \approx 13.2 \text{ bps/Hz}$. Therefore, the minimum number of coordinated UAVs
 required, $N_{min}$, is given by the ceiling function:
 
@@ -275,15 +275,45 @@ Figure \ref{fig:q5_sizing} illustrates $N_{min}$ as a function of $R_{target}$ f
     \label{fig:q5_sizing}
 \end{figure}
 
-\subsection{Analysis of the Results}
-The results demonstrate a strict linear scaling requirement. As the target rate per user increases,
-the fixed capacity provided by a single UAV is rapidly exhausted, requiring the network operator to scale
-out by deploying additional nodes to segment the geographical area into smaller, parallel service clusters. 
+    \subsection{Analysis of the Results}
+    The results demonstrate a strict linear scaling requirement. As the target rate per user increases,
+    the fixed capacity provided by a single UAV is rapidly exhausted, requiring the network operator to scale
+    out by deploying additional nodes to segment the geographical area into smaller, parallel service clusters. 
 
-Furthermore, increasing the user density by 20\% uniformly shifts the fleet sizing requirements upward across
-all target rates. This confirms that physical UAV deployment must scale proportionally with network
-congestion. Because the maximum capacity per UAV is bounded by the physical channel and optimal beamwidth parameters,
-the only variable left to accommodate a denser user base is an increase in the number of concurrent aerial platforms.
+    Furthermore, increasing the user density by 20\% uniformly shifts the fleet sizing requirements upward across
+    all target rates. This confirms that physical UAV deployment must scale proportionally with network
+    congestion. Because the maximum capacity per UAV is bounded by the physical channel and optimal beamwidth parameters,
+    the only variable left to accommodate a denser user base is an increase in the number of concurrent aerial platforms.
+
+\section{Conceptual Trade-offs in UAV Communications}
+
+    \subsection{Altitude Impact on Multicast vs. Broadcast}
+    In the \textbf{multicast} model, a common stream is transmitted to all users, meaning the data rate is bottlenecked by the cell-edge user.
+    Increasing the UAV altitude $H$ broadens the ground footprint, allowing a larger number of users ($K_s$) to be served simultaneously.
+    This expansion in user count outweighs the reduction in the edge user's Signal-to-Noise Ratio (SNR) caused by the increased path loss,
+    making the total multicast rate a non-decreasing function of altitude.
+
+    Conversely, in the \textbf{broadcast} model, users receive independent data streams via Frequency Division Multiple Access (FDMA).
+    As altitude $H$ increases and the footprint expands, the growing number of users forces the available bandwidth and power to be
+    subdivided into smaller fractions. This subdivision degrades individual transmission rates faster than the user count grows,
+    causing the broadcast sum throughput to decrease as altitude increases.
+
+    \subsection{Altitude Independence of Uplink Multiple Access}
+    In the uplink MAC model, ground terminals transmit independent data to the UAV via FDMA. An increase in altitude $H$ expands the
+    footprint and increases the number of active ground transmitters. This increase in users narrows the individual bandwidth allocation
+    per terminal, which consequently lowers the noise floor at the receiver for each individual channel. This localized increase in SNR
+    offsets the increased free-space path loss resulting from the higher altitude. Because these two effects balance each other out,
+    the collective uplink sum rate remains independent of the UAV's altitude.
+
+    \subsection{The Beamwidth vs. Communication Rate Trade-off}
+    The antenna beamwidth ($\Theta$) fundamentally dictates the spatial distribution of the transmitted RF energy. 
+    \begin{itemize}
+        \item \textbf{Narrow Beamwidth (Small $\Theta$):} Concentrates energy into a tight spatial area, maximizing the directional antenna gain and
+        yielding high individual link SNRs and data rates. However, this small footprint covers fewer users simultaneously, requiring more hover
+        locations to cover a given region.
+        \item \textbf{Wide Beamwidth (Large $\Theta$):} Projects a larger ground footprint to capture more users per hover interval, but disperses
+        the RF energy across a wider area. This reduces the antenna gain, lowering link SNR and individual communication rates for the covered terminals.
+    \end{itemize}
 
 \newpage
 \section{References}

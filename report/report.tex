@@ -249,6 +249,42 @@ Figure \ref{fig:q4_reproduction} illustrates the system performance across the t
     \label{fig:q4_reproduction}
 \end{figure}
 
+\section{Network Dimensioning and UAV Fleet Sizing}
+To address the practical deployment of UAV networks, we evaluate the minimum number of UAVs required to satisfy a specific target rate per user,
+$R_{target}$. We select the \textbf{Uplink Multiple Access (MAC)} model for this analysis.
+
+Let the total geographical area be $A = 1,000,000 \text{ m}^2$ ($1 \text{ km}^2$), with a baseline ground terminal density
+of $\rho = 0.005 \text{ GTs/m}^2$. The total number of users in the area is $K_{total} = \rho A$.
+The total required system capacity to guarantee $R_{target}$ for all users simultaneously is $C_{req} = K_{total} R_{target}$.
+
+As established in Section 3, the uplink MAC sum rate is independent of altitude $H$ and achieves a global maximum at an
+optimal beamwidth of $\Theta^* \approx 1.3195 \text{ rad}$[cite: 9]. Consequently, a single UAV provides a strict capacity
+ceiling of $\overline{R}_{MAC}(\Theta^*) \approx 13.2 \text{ bps/Hz}$. Therefore, the minimum number of coordinated UAVs
+required, $N_{min}$, is given by the ceiling function:
+
+\begin{align*}
+N_{min} = \left\lceil \frac{K_{total} R_{target}}{\overline{R}_{MAC}(\Theta^*)} \right\rceil = \left\lceil \frac{\rho A R_{target}}{\overline{R}_{MAC}(\Theta^*)} \right\rceil
+\end{align*}
+
+Figure \ref{fig:q5_sizing} illustrates $N_{min}$ as a function of $R_{target}$ for both the baseline density ($\rho$) and a congested scenario where the user density increases by 20\% ($1.2\rho$). 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{q5_sizing.png} 
+    \caption{Minimum required UAV fleet size vs. Target User Rate ($R_{target}$) for baseline and congested terminal densities.}
+    \label{fig:q5_sizing}
+\end{figure}
+
+\subsection{Analysis of the Results}
+The results demonstrate a strict linear scaling requirement. As the target rate per user increases,
+the fixed capacity provided by a single UAV is rapidly exhausted, requiring the network operator to scale
+out by deploying additional nodes to segment the geographical area into smaller, parallel service clusters. 
+
+Furthermore, increasing the user density by 20\% uniformly shifts the fleet sizing requirements upward across
+all target rates. This confirms that physical UAV deployment must scale proportionally with network
+congestion. Because the maximum capacity per UAV is bounded by the physical channel and optimal beamwidth parameters,
+the only variable left to accommodate a denser user base is an increase in the number of concurrent aerial platforms.
+
 \newpage
 \section{References}
     \begin{enumerate}

@@ -125,4 +125,5 @@ plt.grid(True, linestyle='--')
 plt.legend()
 
 plt.tight_layout()
+plt.savefig('Figure_1.png', dpi=300, bbox_inches='tight')
 plt.show()
